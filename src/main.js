@@ -39,7 +39,7 @@ function setupPokemonAutocomplete(){
       pokemonCatalogPromise ||= api.catalog();
       const catalog=await pokemonCatalogPromise;
       if(!input.isConnected||input.value.trim().toLowerCase()!==query)return;
-      const matches=catalog.filter(p=>/^\\d+$/.test(query)?String(p.id).startsWith(query):p.name.includes(query)).slice(0,7);
+      const matches=catalog.filter(p=>/^\d+$/.test(query)?String(p.id).startsWith(query):p.name.includes(query)).slice(0,7);
       menu.innerHTML=matches.length?matches.map(p=>'<button type="button" class="pokemon-suggestion" data-pokemon-value="'+p.name+'"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+p.id+'.png" alt=""><span>'+p.name+'</span><small>Nº '+String(p.id).padStart(4,'0')+'</small></button>').join(''):'<div class="pokemon-suggestion-empty">Nenhuma sugestão encontrada.</div>';
     }catch{menu.innerHTML='<div class="pokemon-suggestion-empty">Sugestões indisponíveis. Digite o nome completo para pesquisar.</div>'}
   });
@@ -48,7 +48,7 @@ function setupPokemonAutocomplete(){
     if(option){
       const host=option.closest('.searchbox,.field,.battle-select');
       const input=host?.querySelector('input');
-      if(input){input.value=option.dataset.pokemonValue;input.dispatchEvent(new Event('change',{bubbles:true}))}
+      if(input){input.value=option.dataset.pokemonValue;input.dispatchEvent(new Event('change',{bubbles:true}));if(input.id==='dexSearch')input.dispatchEvent(new Event('input',{bubbles:true}))}
       host?.querySelector('.pokemon-suggestions')?.classList.remove('is-open');
       return;
     }
