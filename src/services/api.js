@@ -9,7 +9,8 @@ function directPath(path) {
     .replace(/^\/api\/evolution-chain(?=\/|\?)/, '/evolution-chain')
     .replace(/^\/api\/evolution(?=\/|\?)/, '/evolution-chain')
     .replace(/^\/api\/abilities(?=\/|\?)/, '/ability')
-    .replace(/^\/api\/types(?=\/|\?)/, '/type');
+    .replace(/^\/api\/types(?=\/|\?)/, '/type')
+    .replace(/^\/api\/moves(?=\/|\?)/, '/move');
 }
 
 async function request(path) {
@@ -56,6 +57,7 @@ export const api = {
     return request(`/api/evolution-chain/${chainId}`);
   },
   ability: id => request(`/api/abilities/${encodeURIComponent(id)}`),
+  move: id => request(`/api/moves/${encodeURIComponent(id)}`),
   types: () => request('/api/types'),
   type: id => request(`/api/types/${encodeURIComponent(id)}`)
 };
