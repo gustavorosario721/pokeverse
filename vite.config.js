@@ -6,7 +6,8 @@ const rewriteApiPath = path => path
   .replace(/^\/api\/evolution-chain(?=\/|\?)/, '/evolution-chain')
   .replace(/^\/api\/evolution(?=\/|\?)/, '/evolution-chain')
   .replace(/^\/api\/abilities(?=\/|\?)/, '/ability')
-  .replace(/^\/api\/types(?=\/|\?)/, '/type');
+  .replace(/^\/api\/types(?=\/|\?)/, '/type')
+  .replace(/^\/api\/moves(?=\/|\?)/, '/move');
 
 export default defineConfig({
   server: {
