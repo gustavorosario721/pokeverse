@@ -1,0 +1,23 @@
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
+export async function mountArena(container, pokemonA, pokemonB){
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<700?1.25:1.8));
+  renderer.setSize(container.clientWidth,container.clientHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;container.replaceChildren(renderer.domElement);
+  const scene=new THREE.Scene();scene.background=new THREE.Color('#172b4b');scene.fog=new THREE.Fog('#172b4b',16,36);
+  const camera=new THREE.PerspectiveCamera(42,container.clientWidth/container.clientHeight,.1,100);camera.position.set(0,6,13);
+  const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minDistance=6;controls.maxDistance=22;controls.target.set(0,1,0);
+  scene.add(new THREE.HemisphereLight(0xddeeff,0x24324a,2.2));const key=new THREE.DirectionalLight(0xffffff,3);key.position.set(4,9,5);key.castShadow=true;scene.add(key);const rim=new THREE.PointLight(0x4e9cff,28,24);rim.position.set(-5,4,-2);scene.add(rim);
+  const floor=new THREE.Mesh(new THREE.CircleGeometry(9,64),new THREE.MeshStandardMaterial({color:'#233d63',roughness:.8,metalness:.15}));floor.rotation.x=-Math.PI/2;floor.position.y=-.05;floor.receiveShadow=true;scene.add(floor);
+  const grid=new THREE.GridHelper(18,36,0x4d79ad,0x345477);grid.position.y=-.035;scene.add(grid);
+  const makePlatform=(x,color)=>{const base=new THREE.Mesh(new THREE.CylinderGeometry(2.05,2.2,.3,48),new THREE.MeshStandardMaterial({color,metalness:.45,roughness:.35}));base.position.set(x,.15,0);base.castShadow=true;base.receiveShadow=true;scene.add(base);const ring=new THREE.Mesh(new THREE.TorusGeometry(1.8,.045,10,64),new THREE.MeshBasicMaterial({color}));ring.rotation.x=Math.PI/2;ring.position.set(x,.32,0);scene.add(ring)};
+  makePlatform(-3,'#5da7ff');makePlatform(3,'#ffd447');
+  const textureLoader=new THREE.TextureLoader();
+  const addPokemon=async(p,x)=>{const url=p.sprites?.other?.['official-artwork']?.front_default||p.sprites?.front_default;const group=new THREE.Group();group.position.set(x,.35,0);scene.add(group);if(url){try{const tex=await new Promise((resolve,reject)=>textureLoader.load(url,t=>resolve(t),undefined,reject));tex.colorSpace=THREE.SRGBColorSpace;const material=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false});const sprite=new THREE.Sprite(material);sprite.scale.set(3.35,3.35,1);sprite.position.y=1.7;group.add(sprite)}catch{addFallback(group,x)}}else addFallback(group,x);return group};
+  function addFallback(group,x){const mesh=new THREE.Mesh(new THREE.IcosahedronGeometry(1.15,2),new THREE.MeshStandardMaterial({color:x<0?'#6eb5ff':'#ffcf54',roughness:.4}));mesh.position.y=1.5;mesh.castShadow=true;group.add(mesh)}
+  const [a,b]=await Promise.all([addPokemon(pokemonA,-3),addPokemon(pokemonB,3)]);
+  let running=true,frame=0;const animate=()=>{if(!running)return;frame++;a.position.y=.35+Math.sin(frame*.025)*.08;b.position.y=.35+Math.sin(frame*.025+1)*.08;controls.update();renderer.render(scene,camera);raf=requestAnimationFrame(animate)};let raf=requestAnimationFrame(animate);
+  const resize=()=>{const w=container.clientWidth,h=container.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h)};const observer=new ResizeObserver(resize);observer.observe(container);
+  return {reset(){camera.position.set(0,6,13);controls.target.set(0,1,0);controls.update()},dispose(){running=false;cancelAnimationFrame(raf);observer.disconnect();controls.dispose();scene.traverse(o=>{o.geometry?.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose()}});renderer.dispose();renderer.domElement.remove()}};
+}

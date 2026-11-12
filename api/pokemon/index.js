@@ -1,0 +1,2 @@
+import {upstream,send,handlerError} from '../../server/pokeapi.js';
+export default async function handler(req,res){if(req.method!=='GET')return send(res,405,{error:{message:'Método não permitido'}});try{const limit=Math.min(Math.max(Number(req.query.limit)||24,1),100);const offset=Math.max(Number(req.query.offset)||0,0);const data=await upstream(`pokemon?limit=${limit}&offset=${offset}`);send(res,200,data)}catch(e){handlerError(res,e)}}

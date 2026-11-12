@@ -1,0 +1,2 @@
+import { defineConfig } from 'vite';
+export default defineConfig({ server: { port: 5173, proxy: { '/api': { target: 'https://pokeapi.co/api/v2', changeOrigin: true, rewrite: (path) => path.replace(/^\/api\/pokemon/, '/pokemon').replace(/^\/api\/species/, '/pokemon-species').replace(/^\/api\/evolution/, '/evolution-chain').replace(/^\/api\/abilities/, '/ability').replace(/^\/api\/types/, '/type') } } }, build: { outDir: 'dist', sourcemap: false } });

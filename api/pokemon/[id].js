@@ -1,0 +1,2 @@
+import {upstream,send,handlerError,getId} from '../../server/pokeapi.js';
+export default async function handler(req,res){if(req.method!=='GET')return send(res,405,{error:{message:'Método não permitido'}});const id=getId(req);if(!id)return send(res,400,{error:{message:'Informe um nome ou número de Pokémon válido.'}});try{const data=await upstream(`pokemon/${id}`);send(res,200,data)}catch(e){handlerError(res,e)}}
