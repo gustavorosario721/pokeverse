@@ -23,3 +23,15 @@ export async function getEffectiveness(attacker, defender){
   // A Pokémon can choose moves from either of its types; the best matchup is the maximum, not their product.
   return values.length?Math.max(...values):1;
 }
+
+export async function getMoveEffectiveness(moveType, defender){
+  const attackType=await api.type(moveType);
+  let multiplier=1;
+  for(const target of defender.types){
+    const name=target.type.name;
+    if(attackType.damage_relations.double_damage_to.some(x=>x.name===name))multiplier*=2;
+    if(attackType.damage_relations.half_damage_to.some(x=>x.name===name))multiplier*=.5;
+    if(attackType.damage_relations.no_damage_to.some(x=>x.name===name))multiplier=0;
+  }
+  return multiplier;
+}

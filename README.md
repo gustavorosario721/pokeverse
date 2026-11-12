@@ -1,6 +1,6 @@
 # PokéVerse
 
-PokéVerse é uma aplicação SPA responsiva para explorar Pokémon, consultar informações da PokéAPI, visualizar evoluções, salvar favoritos e comparar atributos. A arena 3D é uma experiência de observação e comparação visual: **não existe sistema de combate, dano, turnos, vitória ou derrota**.
+PokéVerse é uma aplicação SPA responsiva para explorar Pokémon, consultar informações da PokéAPI, visualizar evoluções, salvar favoritos, comparar atributos e disputar batalhas por turnos.
 
 ## Tecnologias
 
@@ -59,7 +59,8 @@ src/styles/          Estilos globais e responsivos
 - Cadeias evolutivas com requisitos interpretados (nível, item, amizade, troca, período e local, quando informados pela API).
 - Coleção de favoritos, descoberta aleatória, histórico e preferências locais.
 - Comparação de dois Pokémon por atributos, medidas e tipos.
-- Arena Three.js com câmera orbital, zoom, iluminação, plataformas, animação de repouso e liberação de recursos ao sair.
+- Simulador de batalhas por turnos com animações de ataque, HP, movimentos derivados dos tipos, efetividade de tipos, STAB, dano por atributos e escolha automática do movimento do rival.
+- Arena Three.js com câmera orbital, zoom, iluminação, plataformas e sprites oficiais animados como combatentes. A tela usa uma apresentação em papel e painel lateral inspirada na referência visual.
 
 ## API Gateway
 
@@ -76,9 +77,9 @@ As funções validam identificadores, aplicam timeout, cache em memória por ins
 
 Os dados ficam no LocalStorage do navegador. Eles não são sincronizados entre dispositivos e podem ser apagados ao limpar os dados do navegador. Nenhum login ou banco de dados é necessário.
 
-## Comparação 3D
+## Arena e batalhas
 
-A cena é importada dinamicamente apenas ao entrar na arena. A implementação usa ilustrações oficiais da PokéAPI em sprites posicionados no espaço 3D, plataformas e controles orbitais. Isso evita depender de arquivos GLB/GLTF de terceiros sem licença. Modelos 3D licenciados podem ser adicionados em `public/models/` e integrados ao carregador. A arena sempre deve continuar oferecendo comparação convencional como alternativa.
+A cena é importada dinamicamente apenas ao entrar na arena. A implementação usa ilustrações oficiais da PokéAPI em sprites posicionados no espaço 3D, plataformas e controles orbitais; os sprites avançam e recuam nos ataques. O simulador calcula dano com base nos atributos, no poder do movimento, no STAB e na efetividade de tipo. Os movimentos são criados a partir dos tipos do Pokémon; o oponente escolhe automaticamente a melhor opção disponível. A PokéAPI não disponibiliza modelos 3D oficiais nem dados de movimentos aprendidos e poder, então esta experiência não representa a lista oficial de golpes. Modelos GLB licenciados podem ser adicionados em `public/models/` e integrados ao carregador.
 
 ## Vercel
 
