@@ -6,6 +6,7 @@ function directPath(path) {
   return path
     .replace(/^\/api\/pokemon(?=\/|\?)/, '/pokemon')
     .replace(/^\/api\/species(?=\/|\?)/, '/pokemon-species')
+    .replace(/^\/api\/evolution-chain(?=\/|\?)/, '/evolution-chain')
     .replace(/^\/api\/evolution(?=\/|\?)/, '/evolution-chain')
     .replace(/^\/api\/abilities(?=\/|\?)/, '/ability')
     .replace(/^\/api\/types(?=\/|\?)/, '/type');
@@ -29,6 +30,7 @@ async function request(path) {
         throw new Error('Serviço indisponível no momento. Tente novamente.');
       }
       const data = await response.json();
+      if (memory.size >= 250) memory.delete(memory.keys().next().value);
       memory.set(path, { data, expires: Date.now() + TTL });
       return data;
     } catch (error) {
@@ -47,7 +49,12 @@ export const api = {
   list: (limit = 24, offset = 0) => request(`/api/pokemon?limit=${limit}&offset=${offset}`),
   pokemon: id => request(`/api/pokemon/${encodeURIComponent(id)}`),
   species: id => request(`/api/species/${encodeURIComponent(id)}`),
-  evolution: id => request(`/api/evolution/${encodeURIComponent(id)}`),
+  evolution: async id => {
+    const species = await request(`/api/species/${encodeURIComponent(id)}`);
+    const chainId = species.evolution_chain?.url?.match(/evolution-chain\/(\d+)\/?$/)?.[1];
+    if (!chainId) throw new Error('Cadeia evolutiva não encontrada para este Pokémon.');
+    return request(`/api/evolution-chain/${chainId}`);
+  },
   ability: id => request(`/api/abilities/${encodeURIComponent(id)}`),
   types: () => request('/api/types'),
   type: id => request(`/api/types/${encodeURIComponent(id)}`)
