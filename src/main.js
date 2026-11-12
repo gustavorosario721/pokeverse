@@ -6,10 +6,9 @@ import {TYPE_COLORS,TYPE_PT,STAT_PT,TYPE_NAMES} from './config/constants.js';
 import {pokemonImage,cap,number,heightText,weightText,totalStats,statMap,flavorText} from './utils/format.js';
 import {flattenEvolution,evolutionRequirement} from './utils/evolution.js';
 import {getTypeAnalysis,getEffectiveness,getMoveEffectiveness} from './services/type-chart.js';
-import {battleHp,buildBattleMoves,calculateDamage,chooseBattleMove} from './comparison/engine/battle.js';
 
 const app=document.querySelector('#app');
-const nav=[['home','⌂','Início'],['pokedex','◉','Pokédex'],['types','◈','Tipos'],['evolution','⇢','Evoluções'],['compare','⇄','Comparar'],['favorites','♡','Favoritos'],['random','✦','Descoberta'],['arena','⚔','Arena 3D']];
+const nav=[['home','⌂','Início'],['pokedex','◉','Pokédex'],['types','◈','Tipos'],['evolution','⇢','Evoluções'],['compare','⇄','Comparar'],['favorites','♡','Favoritos'],['random','✦','Descoberta'],['arena','◉','Comparar 3D']];
 let battleState=null,battleEpoch=0;
 let currentPage='home',currentPokemon=null,currentTab='overview',page=0,pageSize=store.settings().pageSize||24,activeTypes=[],searchTimer=null,searchText='',arenaInstance=null,compareA=25,compareB=6;
 const icon=(x)=>`<span class="nav-icon">${x}</span>`;
@@ -17,7 +16,7 @@ function shell(){app.innerHTML=`<div class="app-shell"><aside class="sidebar"><d
 function toast(msg){const root=document.querySelector('#toastRoot');root.innerHTML=`<div class="toast">${msg}</div>`;setTimeout(()=>root.innerHTML='',2600)}
 function setPageTitle(title){document.querySelector('#topTitle').textContent=title;document.querySelectorAll('.nav-link').forEach(a=>a.classList.toggle('active',a.dataset.route===currentPage))}
 function go(route){location.hash=`/${route}`}
-function render(){const route=decodeURIComponent(location.hash.replace(/^#\/?/,''))||'home';const [pageName,arg]=route.split('/');currentPage=pageName||'home';if(currentPage==='detail'&&arg){loadDetail(arg);return}if(arenaInstance){arenaInstance.dispose();arenaInstance=null}setPageTitle(({home:'Seu universo Pokémon',pokedex:'Pokédex Nacional',types:'Explore os tipos',evolution:'Explorador de evoluções',compare:'Comparação Pokémon',favorites:'Sua coleção',random:'Descoberta surpresa',arena:'Arena de comparação 3D',settings:'Configurações',about:'Sobre o PokéVerse'})[currentPage]||'PokéVerse');const root=document.querySelector('#pageContent');root.innerHTML='<div class="skeleton" style="height:180px"></div>';({home:homePage,pokedex:pokedexPage,types:typesPage,evolution:evolutionPage,compare:comparePage,favorites:favoritesPage,random:randomPage,arena:arenaPage,settings:settingsPage,about:aboutPage}[currentPage]||homePage)(root)}
+function render(){const route=decodeURIComponent(location.hash.replace(/^#\/?/,''))||'home';const [pageName,arg]=route.split('/');currentPage=pageName||'home';if(currentPage==='detail'&&arg){loadDetail(arg);return}if(arenaInstance){arenaInstance.dispose();arenaInstance=null}setPageTitle(({home:'Seu universo Pokémon',pokedex:'Pokédex Nacional',types:'Explore os tipos',evolution:'Explorador de evoluções',compare:'Comparação Pokémon',favorites:'Sua coleção',random:'Descoberta surpresa',arena:'Comparação visual 3D',settings:'Configurações',about:'Sobre o PokéVerse'})[currentPage]||'PokéVerse');const root=document.querySelector('#pageContent');root.innerHTML='<div class="skeleton" style="height:180px"></div>';({home:homePage,pokedex:pokedexPage,types:typesPage,evolution:evolutionPage,compare:comparePage,favorites:favoritesPage,random:randomPage,arena:arenaPage,settings:settingsPage,about:aboutPage}[currentPage]||homePage)(root)}
 function card(p){const image=pokemonImage(p);return `<article class="pokemon-card" data-open="${p.id}"><button class="favorite-btn ${favoritesService.has(p.id)?'is-fav':''}" data-fav="${p.id}" aria-label="Favoritar">${favoritesService.has(p.id)?'♥':'♡'}</button><div class="poke-number">Nº ${String(p.id).padStart(4,'0')}</div><img class="poke-art" src="${image}" alt="${p.name}" loading="lazy" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.id}.png'"><div class="poke-name">${p.name}</div><div class="type-row">${p.types.map(t=>typePill(t.type.name)).join('')}</div></article>`}
 function typePill(name){return `<span class="type-pill" style="background:${TYPE_COLORS[name]||'#899'}">${TYPE_PT[name]||cap(name)}</span>`}
 async function fetchMany(results){return Promise.all(results.map(x=>api.pokemon(x.name).catch(()=>null))).then(a=>a.filter(Boolean))}
@@ -41,147 +40,56 @@ async function favoritesPage(root){const items=favoritesService.list();root.inne
 async function randomPage(root){root.innerHTML=`${heading('SURPRESA','Descoberta aleatória','Deixe o acaso escolher seu próximo Pokémon favorito.')}<div class="panel" style="max-width:650px;margin:25px auto;text-align:center;padding:30px" id="randomCard"><div class="muted">Preparando sua descoberta...</div></div>`;await discoverRandom()}
 async function discoverRandom(){const slot=document.querySelector('#randomCard');if(!slot)return;slot.innerHTML='<div class="skeleton" style="height:220px"></div>';try{const id=Math.floor(Math.random()*1025)+1;const p=await api.pokemon(id);slot.innerHTML=`<div class="eyebrow">SUA DESCOBERTA</div><div class="muted" style="font-size:12px">Nº ${String(p.id).padStart(4,'0')}</div><img src="${pokemonImage(p)}" style="width:230px;height:220px;object-fit:contain;animation:slidein .4s ease" alt="${p.name}"><h2 style="text-transform:capitalize;color:var(--navy);font-size:26px">${p.name}</h2><div class="type-row" style="justify-content:center">${p.types.map(t=>typePill(t.type.name)).join('')}</div><p class="muted" style="font-size:12px">${heightText(p.height)} · ${weightText(p.weight)}</p><div style="display:flex;justify-content:center;gap:9px;margin-top:18px"><button class="btn btn-outline" data-open="${p.id}">Ver detalhes</button><button class="btn btn-primary" id="anotherRandom">Descobrir outro ✦</button></div>`;document.querySelector('#anotherRandom').onclick=discoverRandom}catch(e){slot.innerHTML=`<div class="notice">${e.message}</div>`}}
 async function arenaPage(root){
-  setPageTitle('Simulador de batalhas');
-  root.innerHTML=`<div class="battle-page"><div class="battle-layout"><main class="battle-paper">
-    <div class="battle-topline"><span>◉ POKÉDEX DE COMBATE</span><span id="battleRound">DUELO · AGUARDANDO</span></div>
-    <div class="battle-ribbon"><span>SIMULADOR DE BATALHAS</span><span class="battle-ribbon-type">TURNOS · TIPOS · ESTRATÉGIA</span></div>
-    <div class="battle-selectors">
-      <label class="battle-select"><span>SEU POKÉMON</span><input id="arenaA" value="${compareA}" aria-label="Seu Pokémon, nome ou número"></label>
-      <span class="battle-versus">VS</span>
-      <label class="battle-select"><span>ADVERSÁRIO</span><input id="arenaB" value="${compareB}" aria-label="Pokémon adversário, nome ou número"></label>
-      <button class="btn btn-primary battle-start" id="arenaLoad">Preparar duelo</button>
-    </div>
-    <div class="arena battle-arena" id="arenaCanvas">
-      <div class="battle-hud">
-        <div class="battle-hp-card battle-hp-left"><strong id="fighterAName">Carregando…</strong><span id="fighterAHpText">HP —</span><div class="battle-hp-track"><div id="fighterAHp" class="battle-hp-fill"></div></div></div>
-        <div class="battle-hud-center"><b>VS</b><span id="battleTurnLabel">Preparando</span></div>
-        <div class="battle-hp-card battle-hp-right"><strong id="fighterBName">Carregando…</strong><span id="fighterBHpText">HP —</span><div class="battle-hp-track"><div id="fighterBHp" class="battle-hp-fill"></div></div></div>
+  setPageTitle('Comparação visual 3D');
+  root.innerHTML=`${heading('OBSERVAÇÃO','Arena de comparação 3D','Observe dois Pokémon lado a lado em uma apresentação tridimensional. Esta área não executa batalhas nem calcula dano.') }
+    <div class="panel" style="margin-top:20px">
+      <div class="battle-selectors">
+        <label class="battle-select"><span>PRIMEIRO POKÉMON</span><input id="arenaA" value="${compareA}" aria-label="Primeiro Pokémon, nome ou número"></label>
+        <span class="battle-versus">VS</span>
+        <label class="battle-select"><span>SEGUNDO POKÉMON</span><input id="arenaB" value="${compareB}" aria-label="Segundo Pokémon, nome ou número"></label>
+        <button class="btn btn-primary battle-start" id="arenaLoad">Comparar</button>
       </div>
-      <div class="battle-stage-message" id="battleStageMessage">Preparando os Pokémon para o duelo…</div>
-    </div>
-    <section class="battle-command">
-      <div class="battle-command-head"><div><span class="eyebrow">COMANDOS</span><h2>Escolha um movimento</h2></div><button class="btn btn-outline" id="arenaReset">Centralizar</button></div>
-      <div class="battle-moves" id="battleMoves"><div class="battle-message">Aguardando os combatentes.</div></div>
-      <div class="battle-message" id="battleMessage" role="status" aria-live="polite">Carregando Pokémon…</div>
-      <ol class="battle-log" id="battleLog" aria-label="Registro do duelo"></ol>
-    </section>
-  </main>
-  <aside class="battle-sidebar">
-    <div class="battle-side-heading"><span>◉</span><div><small>SIMULADOR</small><h2>Combatentes</h2></div></div>
-    <div class="battle-side-tabs"><span class="is-selected">DUELO</span><span>STATUS</span><span>TIPOS</span></div>
-    <div class="battle-roster" id="battleRoster"><div class="battle-roster-empty">Os Pokémon selecionados aparecerão aqui.</div></div>
-    <div class="battle-side-note"><span>ⓘ</span><p>Ações por turno. O rival escolhe um movimento eficaz automaticamente.</p></div>
-    <button class="btn btn-outline battle-compare-link" id="arenaConventional">Comparar atributos</button>
-  </aside></div>
-  <p class="battle-footnote">A arena anima as ilustrações oficiais da PokéAPI. Os golpes, tipos e atributos determinam o resultado do combate.</p></div>`;
+      <div class="arena battle-arena" id="arenaCanvas" style="margin-top:18px;min-height:360px">
+        <div class="battle-stage-message" id="battleStageMessage">Escolha dois Pokémon para iniciar a comparação visual.</div>
+      </div>
+      <div class="battle-message" id="battleMessage" role="status" aria-live="polite">A arena apresenta sprites 2D em uma cena 3D; não representa uma batalha oficial.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+        <button class="btn btn-outline" id="arenaReset">Centralizar câmera</button>
+        <button class="btn btn-outline" id="arenaConventional">Ver comparação estatística</button>
+      </div>
+    </div>`;
   document.querySelector('#arenaLoad').onclick=loadArena;
   document.querySelector('#arenaReset').onclick=()=>arenaInstance?.reset();
   document.querySelector('#arenaConventional').onclick=()=>go('compare');
-  document.querySelector('#battleMoves').onclick=e=>{const button=e.target.closest('[data-battle-move]');if(button)playBattleTurn(Number(button.dataset.battleMove))};
   await loadArena();
-}
-
-function renderBattleUI(){
-  const state=battleState;
-  if(!state)return;
-  const writeFighter=(side,pokemon,current,max)=>{
-    const suffix=side==='A'?'A':'B';
-    const name=document.querySelector(`#fighter${suffix}Name`);
-    const text=document.querySelector(`#fighter${suffix}HpText`);
-    const bar=document.querySelector(`#fighter${suffix}Hp`);
-    if(name)name.textContent=cap(pokemon.name);
-    if(text)text.textContent=`HP ${Math.max(0,current)} / ${max}`;
-    if(bar){bar.style.width=`${Math.max(0,current)/max*100}%`;bar.classList.toggle('is-low',current/max<=.25)}
-  };
-  writeFighter('A',state.a,state.hpA,state.maxA);
-  writeFighter('B',state.b,state.hpB,state.maxB);
-  const round=document.querySelector('#battleRound');
-  const turn=document.querySelector('#battleTurnLabel');
-  const message=document.querySelector('#battleMessage');
-  const stageMessage=document.querySelector('#battleStageMessage');
-  if(round)round.textContent=state.finished?'DUELO · FINALIZADO':`RODADA ${state.round}`;
-  if(turn)turn.textContent=state.finished?'Fim de jogo':state.busy?'Executando…':'Sua vez';
-  if(message)message.textContent=state.message;
-  if(stageMessage)stageMessage.textContent=state.finished?state.message:state.busy?'Movimento em andamento…':'Selecione um movimento para atacar.';
-  const moves=document.querySelector('#battleMoves');
-  if(moves)moves.innerHTML=state.movesA.map((move,index)=>`<button class="battle-move" data-battle-move="${index}" style="--move-color:${TYPE_COLORS[move.type]||'#718096'}" ${state.busy||state.finished?'disabled':''}><span class="battle-move-name">${move.name}</span><span class="battle-move-meta">${TYPE_PT[move.type]||cap(move.type)} · PODER ${move.power}</span></button>`).join('');
-  const log=document.querySelector('#battleLog');
-  if(log)log.innerHTML=state.log.slice(-4).map(entry=>`<li>${entry}</li>`).join('');
-  const roster=document.querySelector('#battleRoster');
-  if(roster)roster.innerHTML=[['A',state.a,state.hpA,state.maxA],['B',state.b,state.hpB,state.maxB]].map(([side,pokemon,current,max])=>`<article class="battle-roster-card ${side==='A'?'is-player':''}"><img src="${pokemonImage(pokemon)}" alt="${cap(pokemon.name)}" onerror="this.style.opacity=.2"><div class="battle-roster-copy"><span>${side==='A'?'SEU POKÉMON':'ADVERSÁRIO'} · Nº ${String(pokemon.id).padStart(3,'0')}</span><strong>${cap(pokemon.name)}</strong><div class="type-row">${pokemon.types.map(entry=>typePill(entry.type.name)).join('')}</div><small>HP ${Math.max(0,current)} / ${max}</small><div class="battle-roster-track"><div style="width:${Math.max(0,current)/max*100}%"></div></div></div></article>`).join('');
-}
-
-async function playBattleTurn(moveIndex){
-  const state=battleState;
-  if(!state||state.busy||state.finished||!state.movesA[moveIndex])return;
-  const epoch=battleEpoch;
-  const active=()=>battleEpoch===epoch&&battleState===state;
-  state.busy=true;
-  renderBattleUI();
-  try{
-    const move=state.movesA[moveIndex];
-    const effectiveness=await getMoveEffectiveness(move.type,state.b);
-    if(!active())return;
-    const damage=calculateDamage(state.a,state.b,move,effectiveness);
-    await arenaInstance?.attack(0,TYPE_COLORS[move.type]||'#ffd447');
-    if(!active())return;
-    state.hpB=Math.max(0,state.hpB-damage);
-    state.log.push(`${cap(state.a.name)} usou ${move.name} e causou ${damage} de dano${effectiveness>1?' (super eficaz!)':effectiveness===0?' (não afetou o rival)':''}.`);
-    if(state.hpB===0){
-      state.finished=true;
-      state.message=`${cap(state.a.name)} venceu o duelo!`;
-    }else{
-      renderBattleUI();
-      await new Promise(resolve=>setTimeout(resolve,450));
-      if(!active())return;
-      const enemyMoves=state.movesB;
-      const effectivenessEntries=await Promise.all([...new Set(enemyMoves.map(entry=>entry.type))].map(async type=>[type,await getMoveEffectiveness(type,state.a)]));
-      if(!active())return;
-      const choice=chooseBattleMove(enemyMoves,state.b,state.a,Object.fromEntries(effectivenessEntries));
-      const enemyDamage=calculateDamage(state.b,state.a,choice.move,choice.effectiveness);
-      await arenaInstance?.attack(1,TYPE_COLORS[choice.move.type]||'#ffd447');
-      if(!active())return;
-      state.hpA=Math.max(0,state.hpA-enemyDamage);
-      state.log.push(`${cap(state.b.name)} respondeu com ${choice.move.name} e causou ${enemyDamage} de dano${choice.effectiveness>1?' (super eficaz!)':choice.effectiveness===0?' (não afetou você)':''}.`);
-      state.round++;
-      if(state.hpA===0){
-        state.finished=true;
-        state.message=`${cap(state.b.name)} venceu o duelo. Prepare outro combate para tentar novamente.`;
-      }else state.message='Sua vez: escolha o próximo movimento.';
-    }
-  }catch(error){
-    if(active())state.message=`Não foi possível concluir o turno: ${error.message}`;
-  }finally{
-    if(active()){state.busy=false;renderBattleUI()}
-  }
 }
 
 async function loadArena(){
   const canvas=document.querySelector('#arenaCanvas');
   if(!canvas)return;
   const epoch=++battleEpoch;
-  battleState=null;
   if(arenaInstance){arenaInstance.dispose();arenaInstance=null}
   const message=document.querySelector('#battleMessage');
   if(message)message.textContent='Carregando dados dos Pokémon…';
   try{
-    const [a,b]=await Promise.all([api.pokemon(document.querySelector('#arenaA').value.trim()),api.pokemon(document.querySelector('#arenaB').value.trim())]);
+    const [a,b]=await Promise.all([
+      api.pokemon(document.querySelector('#arenaA').value.trim()),
+      api.pokemon(document.querySelector('#arenaB').value.trim())
+    ]);
     if(epoch!==battleEpoch)return;
     compareA=a.id;compareB=b.id;
     const {mountArena}=await import('./comparison/engine/arena.js');
     if(epoch!==battleEpoch)return;
     arenaInstance=await mountArena(canvas,a,b);
     if(epoch!==battleEpoch){arenaInstance.dispose();arenaInstance=null;return}
-    const maxA=battleHp(a),maxB=battleHp(b);
-    battleState={a,b,maxA,maxB,hpA:maxA,hpB:maxB,movesA:buildBattleMoves(a),movesB:buildBattleMoves(b),round:1,busy:false,finished:false,message:'O duelo começou! Escolha o primeiro movimento.',log:[`Duelo iniciado: ${cap(a.name)} contra ${cap(b.name)}.`]};
-    renderBattleUI();
+    if(message)message.textContent=`Comparação visual: ${cap(a.name)} × ${cap(b.name)}. Nenhum combate ou cálculo de dano é executado.`;
+    const stageMessage=document.querySelector('#battleStageMessage');
+    if(stageMessage)stageMessage.textContent='Use o mouse ou o toque para girar e aproximar a câmera.';
   }catch(error){
     if(epoch!==battleEpoch)return;
     if(message)message.textContent=error.message;
     const stageMessage=document.querySelector('#battleStageMessage');
-    if(stageMessage)stageMessage.textContent='Não foi possível preparar esse duelo.';
-    const moves=document.querySelector('#battleMoves');
-    if(moves)moves.innerHTML='<div class="battle-message">Confira os nomes ou números e tente novamente.</div>';
+    if(stageMessage)stageMessage.textContent='Não foi possível carregar os dois Pokémon. Confira os nomes ou números.';
   }
 }
 function settingsPage(root){const s=store.settings();document.body.classList.toggle('dark-preview',s.theme==='dark');root.innerHTML=`${heading('PREFERÊNCIAS','Configurações','Ajuste a experiência do PokéVerse.')}<div class="panel" style="max-width:700px;margin-top:22px"><div class="section-head" style="margin-top:0"><div><h2>Aparência</h2><p>Personalize a apresentação da aplicação.</p></div></div><div class="field"><label>TEMA</label><select class="select" id="themeSetting"><option value="light" ${s.theme==='light'?'selected':''}>Claro</option><option value="dark" ${s.theme==='dark'?'selected':''}>Escuro (experimental)</option></select></div><div class="field" style="margin-top:18px"><label>POKÉMON POR PÁGINA</label><select class="select" id="sizeSetting"><option value="12" ${pageSize===12?'selected':''}>12</option><option value="24" ${pageSize===24?'selected':''}>24</option><option value="48" ${pageSize===48?'selected':''}>48</option></select></div><button class="btn btn-blue" id="saveSettings" style="margin-top:20px">Salvar preferências</button></div><div class="panel" style="max-width:700px;margin-top:15px"><h2 style="font-size:16px">Dados locais</h2><p class="muted" style="font-size:12px">Favoritos, histórico e preferências ficam salvos neste navegador.</p><button class="btn btn-danger" id="clearHistory">Limpar histórico</button></div>`;document.querySelector('#saveSettings').onclick=()=>{const theme=document.querySelector('#themeSetting').value;store.saveSettings({theme,pageSize:Number(document.querySelector('#sizeSetting').value)});document.body.classList.toggle('dark-preview',theme==='dark');pageSize=Number(document.querySelector('#sizeSetting').value);toast('Preferências salvas!')};document.querySelector('#clearHistory').onclick=()=>{localStorage.removeItem('pokeverse:history');toast('Histórico removido.')}}
