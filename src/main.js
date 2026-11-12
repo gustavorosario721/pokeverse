@@ -34,12 +34,12 @@ function speciesMarkup(s){const g=s.gender_rate===-1?'Sem gênero':`${(s.gender_
 async function evolutionMarkup(chain){const items=flattenEvolution(chain.chain);const ps=await Promise.all(items.map(x=>api.pokemon(x.name).catch(()=>null)));return `<div class="panel"><h3 style="margin-top:0">Linha evolutiva</h3><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">${items.map((x,i)=>`<div style="text-align:center;min-width:105px;flex:1"><img src="${pokemonImage(ps[i])}" style="width:90px;height:90px;object-fit:contain;cursor:pointer" data-open="${ps[i]?.id||x.name}" onerror="this.style.opacity=.2"><b style="display:block;text-transform:capitalize">${x.name}</b><small class="muted">${evolutionRequirement(x.details)}</small></div>${i<items.length-1?'<span style="color:var(--blue);font-size:22px">→</span>':''}`).join('')}</div></div>`}
 async function typesPage(root){root.innerHTML=`${heading('ELEMENTOS','Explore os tipos','Conheça os 18 tipos Pokémon e descubra criaturas de cada categoria.')}<div class="grid-cards" style="margin-top:24px">${TYPE_NAMES.map(t=>`<button class="pokemon-card" data-explore-type="${t}" style="text-align:left;border:0"><div style="height:55px;border-radius:12px;background:${TYPE_COLORS[t]};display:grid;place-items:center;color:white;font-size:23px">✦</div><div class="poke-name" style="margin-top:12px">${TYPE_PT[t]}</div><div class="muted" style="font-size:11px">Ver Pokémon do tipo →</div></button>`).join('')}</div><div id="typeResults" style="margin-top:22px"></div>`}
 async function evolutionPage(root){
-  root.innerHTML=\`${heading('CAMINHOS','Explorador de evoluções','Digite o nome ou número de um Pokémon para visualizar sua linha evolutiva completa.')}
+  root.innerHTML=`${heading('CAMINHOS','Explorador de evoluções','Digite o nome ou número de um Pokémon para visualizar sua linha evolutiva completa.')}
     <div class="toolbar">
       <div class="searchbox"><span>⌕</span><input id="evoSearch" autocomplete="off" placeholder="Ex.: eevee, pikachu, 133"></div>
       <button class="btn btn-blue" id="evoGo">Explorar evolução</button>
     </div>
-    <div id="evoResult" aria-live="polite"></div>\`;
+    <div id="evoResult" aria-live="polite"></div>`;
   const input=document.querySelector('#evoSearch');
   const button=document.querySelector('#evoGo');
   const slot=document.querySelector('#evoResult');
@@ -52,7 +52,7 @@ async function evolutionPage(root){
       const chain=await api.evolution(value);
       slot.innerHTML=await evolutionMarkup(chain);
     }catch(error){
-      slot.innerHTML=\`<div class="notice">${error.message||'Não foi possível localizar a linha evolutiva. Confira o nome ou número e tente novamente.'}</div>\`;
+      slot.innerHTML=`<div class="notice">${error.message||'Não foi possível localizar a linha evolutiva. Confira o nome ou número e tente novamente.'}</div>`;
     }finally{
       button.disabled=false;button.textContent='Explorar evolução';
     }
