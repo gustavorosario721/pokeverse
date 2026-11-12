@@ -24,3 +24,13 @@ body.dark-preview{background:#101a2b;color:#e7eef9}body.dark-preview .topbar,bod
 .battle-hud{z-index:3}
 .battle-stage-message{z-index:4}
 @media(max-width:600px){.pixel-fighter{width:42%;height:46%}.pixel-fighter.enemy{right:3%;top:29%}.pixel-fighter.player{left:2%;bottom:8%}.battle-hud{grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr)}}
+
+/* Animações curtas dos golpes na arena de batalha */
+.pixel-fighter{will-change:transform,filter}
+.pixel-fighter.player.is-attacking{animation:battle-lunge-player .56s cubic-bezier(.2,.8,.25,1)}
+.pixel-fighter.enemy.is-attacking{animation:battle-lunge-enemy .56s cubic-bezier(.2,.8,.25,1)}
+.pixel-fighter.is-hit img{animation:battle-hit-flash .56s ease}
+@keyframes battle-lunge-player{0%,100%{transform:translateX(0) translateY(0)}38%{transform:translateX(34px) translateY(-7px)}62%{transform:translateX(25px) translateY(0)}}
+@keyframes battle-lunge-enemy{0%,100%{transform:translateX(0) translateY(0)}38%{transform:translateX(-34px) translateY(-7px)}62%{transform:translateX(-25px) translateY(0)}}
+@keyframes battle-hit-flash{0%,100%{filter:brightness(1);transform:translateX(0)}20%{filter:brightness(2.2) saturate(.3);transform:translateX(-5px)}45%{filter:brightness(1.5);transform:translateX(5px)}70%{filter:brightness(2);transform:translateX(-3px)}}
+@media(prefers-reduced-motion:reduce){.pixel-fighter.player.is-attacking,.pixel-fighter.enemy.is-attacking,.pixel-fighter.is-hit img{animation-duration:.01ms;animation-iteration-count:1}}
