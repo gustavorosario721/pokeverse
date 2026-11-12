@@ -51,7 +51,10 @@ export const api = {
   pokemon: id => request(`/api/pokemon/${encodeURIComponent(id)}`),
   species: id => request(`/api/species/${encodeURIComponent(id)}`),
   evolution: async id => {
-    const species = await request(`/api/species/${encodeURIComponent(id)}`);
+    // Primeiro resolve o Pokémon: o ID de uma forma pode ser diferente do ID da espécie.
+    const pokemon = await request(`/api/pokemon/${encodeURIComponent(id)}`);
+    const speciesName = pokemon.species?.name || pokemon.name;
+    const species = await request(`/api/species/${encodeURIComponent(speciesName)}`);
     const chainId = species.evolution_chain?.url?.match(/evolution-chain\/(\d+)\/?$/)?.[1];
     if (!chainId) throw new Error('Cadeia evolutiva não encontrada para este Pokémon.');
     return request(`/api/evolution-chain/${chainId}`);

@@ -33,7 +33,33 @@ async function bindDetailTabs(p,species){document.querySelectorAll('[data-tab]')
 function speciesMarkup(s){const g=s.gender_rate===-1?'Sem gênero':`${(s.gender_rate/8*100).toLocaleString('pt-BR')}% fêmeas`;return `<div class="panel"><p>${flavorText(s)}</p><div class="two-col">${[['Geração',cap(s.generation?.name)],['Habitat',cap(s.habitat?.name||'Desconhecido')],['Cor',cap(s.color?.name)],['Formato',cap(s.shape?.name)],['Captura',s.capture_rate],['Proporção de gênero',g],['Crescimento',cap(s.growth_rate?.name)],['Grupo de ovos',(s.egg_groups||[]).map(x=>cap(x.name)).join(', ')||'—']].map(([a,b])=>`<div><span class="muted" style="font-size:11px">${a}</span><br><b>${b||'—'}</b></div>`).join('')}</div><p class="muted" style="font-size:11px">${s.is_legendary?'Pokémon lendário · ':''}${s.is_mythical?'Pokémon mítico':''}</p></div>`}
 async function evolutionMarkup(chain){const items=flattenEvolution(chain.chain);const ps=await Promise.all(items.map(x=>api.pokemon(x.name).catch(()=>null)));return `<div class="panel"><h3 style="margin-top:0">Linha evolutiva</h3><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">${items.map((x,i)=>`<div style="text-align:center;min-width:105px;flex:1"><img src="${pokemonImage(ps[i])}" style="width:90px;height:90px;object-fit:contain;cursor:pointer" data-open="${ps[i]?.id||x.name}" onerror="this.style.opacity=.2"><b style="display:block;text-transform:capitalize">${x.name}</b><small class="muted">${evolutionRequirement(x.details)}</small></div>${i<items.length-1?'<span style="color:var(--blue);font-size:22px">→</span>':''}`).join('')}</div></div>`}
 async function typesPage(root){root.innerHTML=`${heading('ELEMENTOS','Explore os tipos','Conheça os 18 tipos Pokémon e descubra criaturas de cada categoria.')}<div class="grid-cards" style="margin-top:24px">${TYPE_NAMES.map(t=>`<button class="pokemon-card" data-explore-type="${t}" style="text-align:left;border:0"><div style="height:55px;border-radius:12px;background:${TYPE_COLORS[t]};display:grid;place-items:center;color:white;font-size:23px">✦</div><div class="poke-name" style="margin-top:12px">${TYPE_PT[t]}</div><div class="muted" style="font-size:11px">Ver Pokémon do tipo →</div></button>`).join('')}</div><div id="typeResults" style="margin-top:22px"></div>`}
-async function evolutionPage(root){root.innerHTML=`${heading('CAMINHOS','Explorador de evoluções','Digite um Pokémon para visualizar sua linha evolutiva completa.')}<div class="toolbar"><div class="searchbox"><span>⌕</span><input id="evoSearch" placeholder="Ex.: eevee, pikachu, charmander"></div><button class="btn btn-blue" id="evoGo">Explorar evolução</button></div><div id="evoResult"></div>`;const run=async()=>{const v=document.querySelector('#evoSearch').value.trim();if(!v)return;const slot=document.querySelector('#evoResult');slot.innerHTML='<div class="skeleton" style="height:150px"></div>';try{const c=await api.evolution(v);slot.innerHTML=await evolutionMarkup(c)}catch(e){slot.innerHTML=`<div class="notice">${e.message}</div>`}};document.querySelector('#evoGo').onclick=run;document.querySelector('#evoSearch').onkeydown=e=>{if(e.key==='Enter')run()}}
+async function evolutionPage(root){
+  root.innerHTML=`${heading('CAMINHOS','Explorador de evoluções','Digite o nome ou número de um Pokémon para visualizar sua linha evolutiva completa.')}
+    <div class="toolbar">
+      <div class="searchbox"><span>⌕</span><input id="evoSearch" autocomplete="off" placeholder="Ex.: eevee, pikachu, 133"></div>
+      <button class="btn btn-blue" id="evoGo">Explorar evolução</button>
+    </div>
+    <div id="evoResult" aria-live="polite"></div>`;
+  const input=document.querySelector('#evoSearch');
+  const button=document.querySelector('#evoGo');
+  const slot=document.querySelector('#evoResult');
+  const run=async()=>{
+    const value=input.value.trim().toLowerCase();
+    if(!value){slot.innerHTML='<div class="notice">Digite o nome ou número de um Pokémon para pesquisar.</div>';input.focus();return}
+    button.disabled=true;button.textContent='Buscando…';
+    slot.innerHTML='<div class="skeleton" style="height:150px"></div>';
+    try{
+      const chain=await api.evolution(value);
+      slot.innerHTML=await evolutionMarkup(chain);
+    }catch(error){
+      slot.innerHTML=`<div class="notice">${error.message||'Não foi possível localizar a linha evolutiva. Confira o nome ou número e tente novamente.'}</div>`;
+    }finally{
+      button.disabled=false;button.textContent='Explorar evolução';
+    }
+  };
+  button.onclick=run;
+  input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();run()}});
+}
 async function comparePage(root){root.innerHTML=`${heading('ANÁLISE LADO A LADO','Comparar Pokémon','Escolha dois Pokémon e descubra como seus atributos se relacionam.')}<div class="comparison-select" style="margin:22px 0"><div class="panel"><div class="eyebrow">POKÉMON A</div><div class="field"><label>Nome ou número</label><input id="compareA" value="${compareA}" placeholder="Ex.: pikachu"></div></div><div class="panel"><div class="eyebrow">POKÉMON B</div><div class="field"><label>Nome ou número</label><input id="compareB" value="${compareB}" placeholder="Ex.: charizard"></div></div></div><button class="btn btn-blue" id="compareRun">Comparar Pokémon</button><div id="compareResult" style="margin-top:20px"></div>`;document.querySelector('#compareRun').onclick=runComparison;runComparison()}
 async function runComparison(){const slot=document.querySelector('#compareResult');if(!slot)return;const a=document.querySelector('#compareA').value.trim(),b=document.querySelector('#compareB').value.trim();slot.innerHTML='<div class="skeleton" style="height:280px"></div>';try{const [p1,p2]=await Promise.all([api.pokemon(a),api.pokemon(b)]);compareA=p1.id;compareB=p2.id;slot.innerHTML=comparisonMarkup(p1,p2);try{const [wa,wb,ab,ba]=await Promise.all([getTypeAnalysis(p1),getTypeAnalysis(p2),getEffectiveness(p1,p2),getEffectiveness(p2,p1)]);const typePanel=document.createElement('div');typePanel.className='panel';typePanel.style.marginTop='15px';const format=x=>x.filter(v=>v.multiplier!==1).map(v=>`${TYPE_PT[v.type]||cap(v.type)} ${v.multiplier===0?'(imune)':`(×${v.multiplier})`}`).join(' · ')||'Sem relações especiais identificadas';typePanel.innerHTML=`<h3 style="margin-top:0;color:var(--navy)">Relações de tipo</h3><div class="two-col"><div><b style="text-transform:capitalize">${p1.name}</b><p class="muted" style="font-size:12px">Fraquezas e resistências: ${format(wa)}</p><p class="muted" style="font-size:12px">Efetividade contra ${p2.name}: <b>${ab}×</b></p></div><div><b style="text-transform:capitalize">${p2.name}</b><p class="muted" style="font-size:12px">Fraquezas e resistências: ${format(wb)}</p><p class="muted" style="font-size:12px">Efetividade contra ${p1.name}: <b>${ba}×</b></p></div></div>`;slot.append(typePanel)}catch{}}catch(e){slot.innerHTML=`<div class="notice">${e.message}</div>`}}
 function comparisonMarkup(a,b){const sa=statMap(a),sb=statMap(b);return `<div class="two-col"><div class="panel" style="text-align:center"><img src="${pokemonImage(a)}" style="width:140px;height:130px;object-fit:contain"><h2 style="text-transform:capitalize;color:var(--navy)">${a.name}</h2>${a.types.map(t=>typePill(t.type.name)).join('')}</div><div class="panel" style="text-align:center"><img src="${pokemonImage(b)}" style="width:140px;height:130px;object-fit:contain"><h2 style="text-transform:capitalize;color:var(--navy)">${b.name}</h2>${b.types.map(t=>typePill(t.type.name)).join('')}</div></div><div class="panel" style="margin-top:15px"><div class="section-head" style="margin-top:0"><div><h2>Comparação de atributos</h2><p>O destaque indica o maior valor em cada atributo.</p></div><div><b>Total: ${totalStats(a)} × ${totalStats(b)}</b></div></div>${Object.entries(STAT_PT).map(([key,label])=>`<div style="margin:17px 0"><div style="display:flex;justify-content:space-between;font-size:12px"><b>${label}</b><b>${sa[key]} <span class="muted">×</span> ${sb[key]}</b></div><div style="display:flex;gap:5px;margin-top:7px"><div class="stat-track" style="flex:1"><div class="stat-fill" style="margin-left:auto;width:${sa[key]/255*100}%;background:${sa[key]>=sb[key]?'#4cae82':'#8da5c6'}"></div></div><div class="stat-track" style="flex:1"><div class="stat-fill" style="width:${sb[key]/255*100}%;background:${sb[key]>=sa[key]?'#4cae82':'#8da5c6'}"></div></div></div></div>`).join('')}<div class="two-col" style="margin-top:20px"><div><span class="muted">Altura</span><br><b>${heightText(a.height)}</b></div><div><span class="muted">Altura</span><br><b>${heightText(b.height)}</b></div><div><span class="muted">Peso</span><br><b>${weightText(a.weight)}</b></div><div><span class="muted">Peso</span><br><b>${weightText(b.weight)}</b></div></div><button class="btn btn-primary" style="margin-top:20px" id="openArena">Abrir comparação na Arena 3D →</button></div>`}
@@ -221,7 +247,22 @@ function renderSimpleBattle(){
   if(restart)restart.disabled=!state.finished;
 }
 
+async function animateBattleAttack(attackerSide){
+  const attacker=document.querySelector(attackerSide==='player'?'#battlePlayerSprite':'#battleEnemySprite');
+  const target=document.querySelector(attackerSide==='player'?'#battleEnemySprite':'#battlePlayerSprite');
+  if(!attacker||!target)return;
+  attacker.classList.remove('is-attacking');
+  target.classList.remove('is-hit');
+  void attacker.offsetWidth;
+  attacker.classList.add('is-attacking');
+  target.classList.add('is-hit');
+  await new Promise(resolve=>setTimeout(resolve,560));
+  attacker.classList.remove('is-attacking');
+  target.classList.remove('is-hit');
+}
+
 async function executeSimpleMove(attacker,defender,move,attackerSide){
+  await animateBattleAttack(attackerSide);
   const effectiveness=await getMoveEffectiveness(move.type.name,defender);
   const result=simplifiedDamage(attacker,defender,move,effectiveness);
   const state=activeBattle;
