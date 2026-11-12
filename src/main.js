@@ -5,11 +5,11 @@ import {favoritesService} from './services/favorites.js';
 import {TYPE_COLORS,TYPE_PT,STAT_PT,TYPE_NAMES} from './config/constants.js';
 import {pokemonImage,cap,number,heightText,weightText,totalStats,statMap,flavorText} from './utils/format.js';
 import {flattenEvolution,evolutionRequirement} from './utils/evolution.js';
-import {getTypeAnalysis,getEffectiveness,getMoveEffectiveness} from './services/type-chart.js';
+import {getTypeAnalysis,getEffectiveness} from './services/type-chart.js';
 
 const app=document.querySelector('#app');
 const nav=[['home','⌂','Início'],['pokedex','◉','Pokédex'],['types','◈','Tipos'],['evolution','⇢','Evoluções'],['compare','⇄','Comparar'],['favorites','♡','Favoritos'],['random','✦','Descoberta'],['arena','◉','Comparar 3D']];
-let battleState=null,battleEpoch=0;
+let battleEpoch=0;
 let currentPage='home',currentPokemon=null,currentTab='overview',page=0,pageSize=store.settings().pageSize||24,activeTypes=[],searchTimer=null,searchText='',arenaInstance=null,compareA=25,compareB=6;
 const icon=(x)=>`<span class="nav-icon">${x}</span>`;
 function shell(){app.innerHTML=`<div class="app-shell"><aside class="sidebar"><div class="brand"><span class="brand-mark">◉</span><span class="brand-name">PokéVerse</span></div><div class="nav-label">EXPLORAR</div>${nav.map(([id,ic,label])=>`<a href="#/${id}" class="nav-link" data-route="${id}">${icon(ic)}<span>${label}</span></a>`).join('')}<div class="sidebar-bottom"><a href="#/settings" class="nav-link" data-route="settings">${icon('⚙')}<span>Configurações</span></a><a href="#/about" class="nav-link" data-route="about">${icon('ⓘ')}<span>Sobre o projeto</span></a></div></aside><main class="main-area"><header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button class="icon-btn mobile-menu" id="mobileMenu">☰</button><span class="topbar-title" id="topTitle">Seu universo Pokémon</span></div><div class="top-actions"><button class="icon-btn" id="quickSearch" title="Ir para a Pokédex">⌕</button><button class="icon-btn" id="themeToggle" title="Alternar tema">☼</button></div></header><section class="content" id="pageContent"></section></main></div><div id="toastRoot"></div>`;}
@@ -97,6 +97,6 @@ function aboutPage(root){root.innerHTML=`${heading('SOBRE','Conheça o PokéVers
 
 // Event delegation for cards, favorites, routes, and actions.
 document.addEventListener('click',async e=>{const fav=e.target.closest('[data-fav]');if(fav){e.stopPropagation();const id=Number(fav.dataset.fav);try{const p=await api.pokemon(id);const added=favoritesService.toggle(p);fav.classList.toggle('is-fav',added);fav.textContent=added?'♥':'♡';toast(added?'Adicionado aos favoritos':'Removido dos favoritos');if(currentPage==='favorites')favoritesPage(document.querySelector('#pageContent'))}catch(err){toast(err.message)}return}const open=e.target.closest('[data-open]');if(open){go(`detail/${open.dataset.open}`);return}const route=e.target.closest('[data-go]');if(route){go(route.dataset.go);return}const type=e.target.closest('[data-explore-type]');if(type){const t=type.dataset.exploreType;const slot=document.querySelector('#typeResults');slot.innerHTML=`<div class="section-head"><div><h2>Pokémon do tipo ${TYPE_PT[t]}</h2></div></div><div class="grid-cards" id="typeGrid"></div>`;const data=await api.type(t);const pokemon=data.pokemon.slice(0,24).map(x=>({name:x.pokemon.name}));const ps=await fetchMany(pokemon);document.querySelector('#typeGrid').innerHTML=ps.map(card).join('');slot.scrollIntoView({behavior:'smooth'});return}if(e.target.id==='openArena')go('arena')});
-window.addEventListener('hashchange',()=>{battleEpoch++;battleState=null;render()});
+window.addEventListener('hashchange',()=>{battleEpoch++;render()});
 document.addEventListener('click',e=>{if(e.target.id==='quickSearch')go('pokedex');if(e.target.id==='themeToggle'){const enabled=document.body.classList.toggle('dark-preview');const s=store.settings();store.saveSettings({...s,theme:enabled?'dark':'light'});toast('Tema atualizado.')}if(e.target.id==='mobileMenu'){document.querySelector('.sidebar')?.classList.toggle('mobile-open')}});
 shell();render();
